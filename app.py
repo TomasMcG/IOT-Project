@@ -9,6 +9,7 @@ from grove.gpio import GPIO
 import json
 from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
 from keys import *
+import logging
 
 connection_string = connection_string
 device_client = IoTHubDeviceClient.create_from_connection_string(connection_string)
@@ -26,15 +27,18 @@ relay = GPIO(12,GPIO.OUT)
 relay = GroveRelay(5)
 
 def handle_method_request(request):
-    print("Direct method received - ", request.name)
+    try:
+        print("Direct method received - ", request.name)
 
-    if request.name == "relay_on":
-        relay.on()
-    elif request.name == "relay_off":
-        relay.off() 
-    
-    method_response = MethodResponse.create_from_method_request(request, 200)
-    device_client.send_method_response(method_response)
+        if request.name == "relay_on":
+            relay.on()
+        elif request.name == "relay_off":
+            relay.off() 
+        
+        method_response = MethodResponse.create_from_method_request(request, 200)
+        device_client.send_method_response(method_response)
+    except Exception:
+            print("Error Receiving relay response: %s",Exception)
 
 
 #tells iot hub client to call handle method request function when direct method is called
@@ -73,8 +77,12 @@ def main():
         print(f"Light Sensor Value: {light_value}")
         telemetry = json.dumps({'light_value' : light_value})
         print("Sending telemetry ", telemetry)
-        message = Message(json.dumps({ 'light_value': light_value }))
-        device_client.send_message(message)
+        try:
+            message = Message(json.dumps({ 'light_value': light_value }))
+            device_client.send_message(message)
+        except Exception: 
+            print("Error Sending Light Values: %s",Exception)
+
         time.sleep(5) 
 
  
