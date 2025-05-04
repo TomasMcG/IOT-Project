@@ -8,8 +8,12 @@ import json
 from grove.gpio import GPIO
 import json
 from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
+
 from keys import *
-import logging
+import requests
+from msrest.authentication import ApiKeyCredentials
+from azure.cognitiveservices.vision.customvision.prediction import CustomVisionPredictionClient
+
 
 connection_string = connection_string
 device_client = IoTHubDeviceClient.create_from_connection_string(connection_string)
@@ -25,6 +29,15 @@ print('Connected')
 
 relay = GPIO(12,GPIO.OUT)
 relay = GroveRelay(5)
+
+prediction_url = prediction_url
+prediction_key = prediction_key
+parts = prediction_url.split('/')
+endpoint = 'https://' + parts[2]
+project_id = parts[6]
+iteration_name = parts[9]
+prediction_credentials = ApiKeyCredentials(in_headers={"Prediction-key": prediction_key})
+predictor = CustomVisionPredictionClient(endpoint, prediction_credentials)
 
 def handle_method_request(request):
     try:
@@ -63,14 +76,9 @@ def main():
     camera = PiCamera()
     camera.resolution = (640, 480)
     camera.rotation = 180
-    image = io.BytesIO()
-    camera.capture(image, 'jpeg')
-    image.seek(0)
-    with open('image.jpg', 'wb') as image_file:
-        print('Taking Photo')
-        image_file.write(image.read())
-    camera.close()
+ 
     print(f"Testing Grove Light Sensor on pin A{pin}...")
+    
 
     while True:
         light_value = sensor.read_light()
@@ -83,6 +91,17 @@ def main():
         except Exception: 
             print("Error Sending Light Values: %s",Exception)
 
+
+        image = io.BytesIO()
+        camera.capture(image, 'jpeg')
+        image.seek(0)
+        results = predictor.classify_image(project_id, iteration_name, image)
+        for prediction in results.predictions:
+            print(f'{prediction.tag_name}:\t{prediction.probability * 100:.2f}%')
+        with open('image.jpg', 'wb') as image_file:
+            print('Taking Photo')
+            image_file.write(image.read())
+        camera.close()
         time.sleep(5) 
 
  
