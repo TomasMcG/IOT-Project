@@ -17,6 +17,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from azure.storage.blob import ContainerClient
 import base64
+import BlynkLib
 
 connection_string = connection_string
 device_client = IoTHubDeviceClient.create_from_connection_string(connection_string)
@@ -30,6 +31,7 @@ print('Connecting')
 device_client.connect()
 print('Connected')
 
+blynk = BlynkLib.Blynk(BLYNK_AUTH)
 
 client = ContainerClient.from_connection_string(connect_str, container_name)
 records = []
@@ -79,6 +81,8 @@ iteration_name = parts[9]
 prediction_credentials = ApiKeyCredentials(in_headers={"Prediction-key": prediction_key})
 predictor = CustomVisionPredictionClient(endpoint, prediction_credentials)
 
+
+
 def handle_method_request(request):
     try:
         print("Direct method received - ", request.name)
@@ -111,6 +115,7 @@ class GroveLightSensor:
 
 
 def main():
+    last_light_time = 0
     pin = 2  
     sensor = GroveLightSensor(pin)
     camera = PiCamera()
@@ -121,6 +126,7 @@ def main():
     
 
     while True:
+        blynk.run()
         light_value = sensor.read_light()
         timestamp = datetime.utcnow().isoformat()
         print(f"Light Sensor Value: {light_value}")
@@ -145,6 +151,11 @@ def main():
             print('Taking Photo')
             image_file.write(image.read())
         image.close()
+        current_time = time.time()
+        if current_time - last_light_time >= 10:
+           
+            blynk.virtual_write(0, light_value)  
+            last_light_time = current_time
         time.sleep(5) 
 
  
