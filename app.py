@@ -45,7 +45,6 @@ for blob in client.list_blobs():
             body = msg.get("Body")
             if body:
                 decoded = json.loads(base64.b64decode(body).decode('utf-8'))
-                print("Decoded JSON from blob:", decoded)
                 records.append({
                     "timestamp": pd.to_datetime(decoded.get("timestamp", msg.get("EnqueuedTimeUtc"))),
                     "light_value": decoded.get("light_value")
@@ -144,13 +143,15 @@ def main():
         image = io.BytesIO()
         camera.capture(image, 'jpeg')
         image.seek(0)
+        with open('/home/tomas/IOT-Project/image.jpg', 'wb') as image_file:
+            print('Taking Photo')
+            image_file.write(image.read())
+        image.seek(0)
         results = predictor.classify_image(project_id, iteration_name, image)
         for prediction in results.predictions:
             print(f'{prediction.tag_name}:\t{prediction.probability * 100:.2f}%')
-        with open('image.jpg', 'wb') as image_file:
-            print('Taking Photo')
-            image_file.write(image.read())
-        image.close()
+
+        
         current_time = time.time()
         if current_time - last_light_time >= 10:
            
