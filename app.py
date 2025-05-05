@@ -82,6 +82,12 @@ GPIO.setup(SERVO_PIN, GPIO.OUT)
 pwm = GPIO.PWM(SERVO_PIN, 50)  
 pwm.start(0)  
 
+
+MOTION_SENSOR_PIN = 22
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(MOTION_SENSOR_PIN, GPIO.IN)
+
+
 prediction_url = prediction_url
 prediction_key = prediction_key
 parts = prediction_url.split('/')
@@ -130,6 +136,7 @@ def set_angle(angle):
   
 
 def main():
+    motion_detected = False
     last_light_time = 0
     pin = 2  
     sensor = GroveLightSensor(pin)
@@ -137,54 +144,72 @@ def main():
     camera.resolution = (640, 480)
     camera.rotation = 180
  
-    print(f"Testing Grove Light Sensor on pin A{pin}...")
+    print("Waiting for motion...")
     
 
     while True:
-        set_angle(0)
-        blynk.run()
-        light_value = sensor.read_light()
-        timestamp = datetime.utcnow().isoformat()
-        print(f"Light Sensor Value: {light_value}")
-        telemetry = {'light_value': light_value, 'timestamp': timestamp}
-        print("Sending telemetry ", telemetry)
-        with open("light_log.json", "a") as f:
-            f.write(json.dumps(telemetry) + "\n")
-        try:
-            message = Message(json.dumps( telemetry ))
-            device_client.send_message(message)
-        except Exception: 
-            print("Error Sending Light Values: %s",Exception)
+        if GPIO.input(MOTION_SENSOR_PIN):
+            if not motion_detected:
+                print("Motion detected!")
+                motion_detected = True
+                light_value = sensor.read_light()
+                timestamp = datetime.utcnow().isoformat()
+                print(f"Light Sensor Value: {light_value}")
+                telemetry = {'light_value': light_value, 'timestamp': timestamp}
+                print("Sending telemetry ", telemetry)
+                with open("light_log.json", "a") as f:
+                    f.write(json.dumps(telemetry) + "\n")
+                try:
+                    message = Message(json.dumps( telemetry ))
+                    device_client.send_message(message)
+                except Exception: 
+                    print("Error Sending Light Values: %s",Exception)
 
 
-        image = io.BytesIO()
-        camera.capture(image, 'jpeg')
-        image.seek(0)
-        with open('/home/tomas/IOT-Project/image.jpg', 'wb') as image_file:
-            print('Taking Photo')
-            image_file.write(image.read())
-        image.seek(0)
-        results = predictor.classify_image(project_id, iteration_name, image)
-        
-        for prediction in results.predictions:
-            print(f'{prediction.tag_name}:\t{prediction.probability * 100:.2f}%')
-
-            if prediction.tag_name.lower() == "dog" and prediction.probability > 0.4:
-                print("Opening door")
-                set_angle(180)  # Trigger servo to open
-            elif prediction.tag_name.lower() == "dog" and prediction.probability < 0.4:
-                print("Not a dog")
-                set_angle(0)  
+                image = io.BytesIO()
+                camera.capture(image, 'jpeg')
+                image.seek(0)
+                with open('/home/tomas/IOT-Project/image.jpg', 'wb') as image_file:
+                    print('Taking Photo')
+                    image_file.write(image.read())
+                image.seek(0)
+                results = predictor.classify_image(project_id, iteration_name, image)
                 
-        current_time = time.time()
-        if current_time - last_light_time >= 10:
-           
-            blynk.virtual_write(0, light_value)  
-            last_light_time = current_time
-        time.sleep(5) 
+                for prediction in results.predictions:
+                    print(f'{prediction.tag_name}:\t{prediction.probability * 100:.2f}%')
+
+                    if prediction.tag_name.lower() == "dog" and prediction.probability > 0.4:
+                        print("Opening door")
+                        set_angle(180)  # Trigger servo to open
+        
+                        
+                current_time = time.time()
+                if current_time - last_light_time >= 10:
+                
+                    blynk.virtual_write(0, light_value)  
+                    last_light_time = current_time
+
+            
+            else:
+                if motion_detected:
+                    print("Motion ended.")
+                    set_angle(0)
+                motion_detected = False
+            blynk.run()
+            time.sleep(5)   
+
+
+
         
  
-
+@blynk.on("V1")
+def handle_v1_write(value):
+    button_value = value[0]
+    print(f'Current swith value: {button_value}')
+    if button_value=="1":
+        relay.on()
+    else:
+        relay.off()
   
 
 if __name__ == "__main__":
