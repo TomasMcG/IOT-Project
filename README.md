@@ -24,6 +24,22 @@ folder
 ![image](https://github.com/user-attachments/assets/f23459a9-da45-4f69-be10-01537d67dc36)
 Did 4 iterations of training
 
+![image](https://github.com/user-attachments/assets/55a5ba5a-c7d8-4b0f-80c9-a9f7f42775ea)
+Here was the code for my function app, it didn't work in the end after I added a timestamp and I wasn't able to fix it.
+Checks if light value is greater than 100 and if not turns on the relay with a message response.
+![image](https://github.com/user-attachments/assets/642fd08c-ee07-40b6-9e95-c8b7dfc8d840)
+code for handling response, no longer works.
+
+![image](https://github.com/user-attachments/assets/6394385d-b008-43f6-8fd4-9ea6540d2ac6)
+main code loop that runs when motion is detected. reads the light value and sends it as telemtry with a timestamp.
+![image](https://github.com/user-attachments/assets/3e08e424-c1a9-467d-8594-6f1450c469f5)
+code to display values in blynk.
+Predictions check there probabilty and set the servor motor angle to open.
+After a while if no motion detected it closes.
+
+![image](https://github.com/user-attachments/assets/26c27641-2aa9-4fc5-a3a2-2ceffa226c51)
+code for plotting
+
 ## Tools, Technologies and Equipment
 
 VS Code, Rasp berry pi, azure, iot hub, blob, custom vision, maybe phone
