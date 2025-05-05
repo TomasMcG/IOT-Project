@@ -5,7 +5,9 @@ import time
 from picamera import PiCamera
 from grove.grove_relay import GroveRelay
 import json
-from grove.gpio import GPIO
+#from grove.gpio import GPIO
+from grove.gpio import GPIO as GroveGPIO
+import RPi.GPIO as GPIO
 import json
 from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
 from datetime import datetime
@@ -68,8 +70,17 @@ else:
     print("No data to plot.")
 
 
-relay = GPIO(12,GPIO.OUT)
+#relay = GPIO(12,GPIO.OUT)
+relay_pin = GroveGPIO(12, GroveGPIO.OUT)
 relay = GroveRelay(5)
+
+SERVO_PIN = 18  
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(SERVO_PIN, GPIO.OUT)
+
+pwm = GPIO.PWM(SERVO_PIN, 50)  
+pwm.start(0)  
 
 prediction_url = prediction_url
 prediction_key = prediction_key
@@ -111,7 +122,12 @@ class GroveLightSensor:
     def read_light(self):
         return self.adc.read(self.channel)
     
-
+def set_angle(angle):
+    duty = 2 + (angle / 18)  # Convert angle (0-180) 
+    pwm.ChangeDutyCycle(duty)
+    time.sleep(0.5)
+    pwm.ChangeDutyCycle(0)  # Stop sending signal
+  
 
 def main():
     last_light_time = 0
@@ -125,6 +141,7 @@ def main():
     
 
     while True:
+        set_angle(0)
         blynk.run()
         light_value = sensor.read_light()
         timestamp = datetime.utcnow().isoformat()
@@ -148,17 +165,24 @@ def main():
             image_file.write(image.read())
         image.seek(0)
         results = predictor.classify_image(project_id, iteration_name, image)
+        
         for prediction in results.predictions:
             print(f'{prediction.tag_name}:\t{prediction.probability * 100:.2f}%')
 
-        
+            if prediction.tag_name.lower() == "dog" and prediction.probability > 0.4:
+                print("Opening door")
+                set_angle(180)  # Trigger servo to open
+            elif prediction.tag_name.lower() == "dog" and prediction.probability < 0.4:
+                print("Not a dog")
+                set_angle(0)  
+                
         current_time = time.time()
         if current_time - last_light_time >= 10:
            
             blynk.virtual_write(0, light_value)  
             last_light_time = current_time
         time.sleep(5) 
-
+        
  
 
   
