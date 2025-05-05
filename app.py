@@ -136,6 +136,7 @@ def set_angle(angle):
   
 
 def main():
+    set_angle(0)
     motion_detected = False
     last_light_time = 0
     pin = 2  
@@ -152,6 +153,7 @@ def main():
             if not motion_detected:
                 print("Motion detected!")
                 motion_detected = True
+
                 light_value = sensor.read_light()
                 timestamp = datetime.utcnow().isoformat()
                 print(f"Light Sensor Value: {light_value}")
@@ -196,20 +198,14 @@ def main():
                     set_angle(0)
                 motion_detected = False
             blynk.run()
-            time.sleep(5)   
+            time.sleep(5)
+            set_angle(0)   
 
 
 
         
  
-@blynk.on("V1")
-def handle_v1_write(value):
-    button_value = value[0]
-    print(f'Current swith value: {button_value}')
-    if button_value=="1":
-        relay.on()
-    else:
-        relay.off()
+
   
 
 if __name__ == "__main__":
