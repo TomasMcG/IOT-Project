@@ -21,6 +21,9 @@ Log file
 ![image](https://github.com/user-attachments/assets/e2ccdad8-a5af-4f7d-8e02-a29c98a9964f)
 folder
 
+![image](https://github.com/user-attachments/assets/f23459a9-da45-4f69-be10-01537d67dc36)
+Did 4 iterations of training
+
 ## Tools, Technologies and Equipment
 
 VS Code, Rasp berry pi, azure, iot hub, blob, custom vision, maybe phone
