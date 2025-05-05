@@ -8,7 +8,7 @@ import json
 from grove.gpio import GPIO
 import json
 from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
-
+from datetime import datetime
 from keys import *
 import requests
 from msrest.authentication import ApiKeyCredentials
@@ -82,11 +82,12 @@ def main():
 
     while True:
         light_value = sensor.read_light()
+        timestamp = datetime.utcnow().isoformat()
         print(f"Light Sensor Value: {light_value}")
-        telemetry = json.dumps({'light_value' : light_value})
+        telemetry = json.dumps({'light_value': light_value, 'timestamp': timestamp})
         print("Sending telemetry ", telemetry)
         try:
-            message = Message(json.dumps({ 'light_value': light_value }))
+            message = Message(json.dumps( telemetry ))
             device_client.send_message(message)
         except Exception: 
             print("Error Sending Light Values: %s",Exception)
@@ -101,7 +102,7 @@ def main():
         with open('image.jpg', 'wb') as image_file:
             print('Taking Photo')
             image_file.write(image.read())
-        camera.close()
+        image.close()
         time.sleep(5) 
 
  
