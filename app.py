@@ -13,7 +13,10 @@ from keys import *
 import requests
 from msrest.authentication import ApiKeyCredentials
 from azure.cognitiveservices.vision.customvision.prediction import CustomVisionPredictionClient
-
+import pandas as pd
+import matplotlib.pyplot as plt
+from azure.storage.blob import ContainerClient
+import base64
 
 connection_string = connection_string
 device_client = IoTHubDeviceClient.create_from_connection_string(connection_string)
@@ -26,6 +29,43 @@ client_telemetry_topic = id + '/telemetry'
 print('Connecting')
 device_client.connect()
 print('Connected')
+
+
+client = ContainerClient.from_connection_string(connect_str, container_name)
+records = []
+
+for blob in client.list_blobs():
+    blob_data = client.download_blob(blob).readall()
+    lines = blob_data.decode('utf-8').splitlines()
+    for line in lines:
+        try:
+            msg = json.loads(line)
+            body = msg.get("Body")
+            if body:
+                decoded = json.loads(base64.b64decode(body).decode('utf-8'))
+                print("Decoded JSON from blob:", decoded)
+                records.append({
+                    "timestamp": pd.to_datetime(decoded.get("timestamp", msg.get("EnqueuedTimeUtc"))),
+                    "light_value": decoded.get("light_value")
+                })
+        except Exception as e:
+            print(f"Skipped line: {e}")
+
+df = pd.DataFrame(records)
+
+if not df.empty:
+    df.sort_values("timestamp", inplace=True)
+    plt.plot(df["timestamp"], df["light_value"], marker='o')
+    plt.title("Light Values Over Time")
+    plt.xlabel("Time")
+    plt.ylabel("Light(lux) ")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+    plt.savefig("light_plot.png")
+else:
+    print("No data to plot.")
+
 
 relay = GPIO(12,GPIO.OUT)
 relay = GroveRelay(5)
@@ -84,8 +124,10 @@ def main():
         light_value = sensor.read_light()
         timestamp = datetime.utcnow().isoformat()
         print(f"Light Sensor Value: {light_value}")
-        telemetry = json.dumps({'light_value': light_value, 'timestamp': timestamp})
+        telemetry = {'light_value': light_value, 'timestamp': timestamp}
         print("Sending telemetry ", telemetry)
+        with open("light_log.json", "a") as f:
+            f.write(json.dumps(telemetry) + "\n")
         try:
             message = Message(json.dumps( telemetry ))
             device_client.send_message(message)
